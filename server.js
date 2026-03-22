@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -35,8 +36,14 @@ function getDefaultData() {
       { id: uuidv4(), title: 'Review competitor analysis', desc: 'Summarize findings from market research.', assignee: 'Priya', status: 'todo', priority: 'medium', due: d(6), category: 'Marketing', comments: [], created: d(0) },
     ],
     members: ['Phillip', 'Catherine', 'Liberty', 'Gail', 'Gil', 'Lisa', 'Jules', 'Donna', 'Barbi', 'Cathy'],
-    activityLog: []
+    activityLog: [],
+    passwords: {}  // { memberName: hashedPassword } — empty until each user sets theirs on first login
   };
+}
+
+// ─── PASSWORD HELPERS ───
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
 }
 
 function loadData() {
@@ -64,9 +71,55 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── REST API ───
 
-// Get all data
+// Get all data (don't expose passwords)
 app.get('/api/state', (req, res) => {
   res.json({ tasks: data.tasks, members: data.members });
+});
+
+// Check if a member has set a password yet
+app.get('/api/auth/status/:name', (req, res) => {
+  const name = req.params.name;
+  if (!data.passwords) data.passwords = {};
+  const hasPassword = !!data.passwords[name];
+  res.json({ hasPassword });
+});
+
+// Set password (first-time login only)
+app.post('/api/auth/register', (req, res) => {
+  const { name, password } = req.body;
+  if (!name || !password) return res.status(400).json({ error: 'Name and password are required' });
+  if (password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  if (!data.passwords) data.passwords = {};
+  if (data.passwords[name]) return res.status(400).json({ error: 'Password already set. Use login instead.' });
+  data.passwords[name] = hashPassword(password);
+  saveData(data);
+  res.json({ success: true });
+});
+
+// Login with existing password
+app.post('/api/auth/login', (req, res) => {
+  const { name, password } = req.body;
+  if (!name || !password) return res.status(400).json({ error: 'Name and password are required' });
+  if (!data.passwords) data.passwords = {};
+  if (!data.passwords[name]) return res.status(400).json({ error: 'No password set. Please set one first.' });
+  if (data.passwords[name] !== hashPassword(password)) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+  res.json({ success: true });
+});
+
+// Register a new member (with password)
+app.post('/api/auth/register-new', (req, res) => {
+  const { name, password } = req.body;
+  if (!name?.trim() || !password) return res.status(400).json({ error: 'Name and password are required' });
+  if (password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  if (data.members.includes(name.trim())) return res.status(400).json({ error: 'Name already taken' });
+  if (!data.passwords) data.passwords = {};
+  data.members.push(name.trim());
+  data.passwords[name.trim()] = hashPassword(password);
+  saveData(data);
+  io.emit('member:added', name.trim());
+  res.status(201).json({ success: true });
 });
 
 // Create task
