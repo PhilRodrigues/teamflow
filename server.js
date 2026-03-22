@@ -34,7 +34,7 @@ function getDefaultData() {
       { id: uuidv4(), title: 'Run performance benchmarks', desc: 'Compare current vs previous release.', assignee: 'Dev', status: 'done', priority: 'low', due: d(-2), category: 'Backend', comments: [{ id: uuidv4(), author: 'Dev', text: 'Results posted in #engineering.', time: d(-1) }], created: d(-7) },
       { id: uuidv4(), title: 'Review competitor analysis', desc: 'Summarize findings from market research.', assignee: 'Priya', status: 'todo', priority: 'medium', due: d(6), category: 'Marketing', comments: [], created: d(0) },
     ],
-    members: ['Phillip', 'Sarah', 'James', 'Anya', 'Marcus', 'Olivia', 'Dev', 'Priya', 'Tom', 'Lena'],
+    members: ['Phillip', 'Catherine', 'Liberty', 'Gail', 'Gil', 'Lisa', 'Jules', 'Donna', 'Barbi', 'Cathy'],
     activityLog: []
   };
 }
