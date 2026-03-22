@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: teamflow
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: teamflow-data
+      mountPath: /data
+      sizeGB: 1
